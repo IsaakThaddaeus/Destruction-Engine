@@ -5,15 +5,13 @@ using UnityEngine;
 public class DestructionManager : MonoBehaviour
 {
     public List<Structure> structures;
-    public List<GameObject> structureObjects;
     public List<Block> blocks;
     public List<Link> links;
 
     void Start()
     {
         FindLinks();
-        structureObjects = new List<GameObject>();
-        UpdateStructures();
+        InitStructures();
         Debug.Log("Structures: " + structures.Count);
     }
 
@@ -102,7 +100,7 @@ public class DestructionManager : MonoBehaviour
     //------------------------------------------------------------------------------------------------
     //Update Structures
     //------------------------------------------------------------------------------------------------
-    void UpdateStructures()
+    void InitStructures()
     {
         structures = new List<Structure>();
         List<Block> tempBlocks = new List<Block>(blocks);
@@ -125,33 +123,80 @@ public class DestructionManager : MonoBehaviour
             structures.Add(structure);
         }
 
-        for (int i = 0; i < structureObjects.Count; i++)
-        {
-            structureObjects[i].transform.DetachChildren();
-            Destroy(structureObjects[i]);
-        }
 
-        structureObjects = new List<GameObject>();
 
         for (int i = 0; i < structures.Count; i++)
         {
-            GameObject structureObject = new GameObject("Structure " + i);
-            structureObject.transform.parent = transform;
-            Rigidbody structureRigidBody = structureObject.AddComponent<Rigidbody>();
-            structureRigidBody.mass = 100; 
-            
+            structures[i].structureObject = new GameObject("Structure " + i);
+            structures[i].structureObject.transform.parent = transform;
+            Rigidbody structureRigidBody = structures[i].structureObject.AddComponent<Rigidbody>();
+            structureRigidBody.mass = 100;
+
             for (int j = 0; j < structures[i].blocks.Count; j++)
             {
-                structures[i].blocks[j].transform.parent = structureObject.transform;
-                
+                structures[i].blocks[j].transform.parent = structures[i].structureObject.transform;
+
                 if (structures[i].blocks[j].grounded)
                     structureRigidBody.isKinematic = true;
             }
-
-            structureObjects.Add(structureObject);
         }
 
     }
+    void UpdateStructure(Block block)
+    {
+       
+        Structure structure = structures.Find(structure => structure.blocks.Contains(block));
+        structure.blocks.Remove(block);
+
+        List<List<Block>> newStructures = new List<List<Block>>();
+        List<Block> tempBlocks = new List<Block>(structure.blocks);
+
+        while (tempBlocks.Count > 0)
+        {
+            List<Block> newStructure = new List<Block>();
+            newStructure = new List<Block> { tempBlocks[0] };
+            tempBlocks.RemoveAt(0);
+
+            int i = 0;
+            while (i < newStructure.Count)
+            {
+                List<Block> connectedBlocks = getAllConnectedBlocks(newStructure[i]);
+                tempBlocks = tempBlocks.Except(connectedBlocks).ToList();
+                newStructure = newStructure.Union(connectedBlocks).ToList();
+                i++;
+            }
+
+            newStructures.Add(newStructure);
+        }
+
+
+        structure.structureObject.transform.DetachChildren();
+        structures.Remove(structure);
+        Destroy(structure.structureObject);
+
+        for (int i = 0; i < newStructures.Count; i++)
+        {
+            Structure newStructure = new Structure();
+            newStructure.blocks = new List<Block>(newStructures[i]);
+
+            newStructure.structureObject = new GameObject("Structure " + i);
+            newStructure.structureObject.transform.parent = transform;
+            Rigidbody structureRigidBody = newStructure.structureObject.AddComponent<Rigidbody>();
+            structureRigidBody.mass = 100;
+
+            for (int j = 0; j < newStructure.blocks.Count; j++)
+            {
+                newStructure.blocks[j].transform.parent = newStructure.structureObject.transform;
+
+                if (newStructure.blocks[j].grounded)
+                    structureRigidBody.isKinematic = true;
+            }
+
+            structures.Add(newStructure);
+        }
+
+    }
+
     List<Block> getAllConnectedBlocks(Block block)
     {
         List<Block> connectedBlocks = new List<Block>();
@@ -171,7 +216,8 @@ public class DestructionManager : MonoBehaviour
     {
         blocks.Remove(block);
         links.RemoveAll(link => link.blockA == block || link.blockB == block);
-        UpdateStructures();
+        UpdateStructure(block);
+
         Debug.Log("Structures: " + structures.Count);
     }
 
@@ -197,6 +243,7 @@ public class DestructionManager : MonoBehaviour
 public class Structure
 {
     public List<Block> blocks;
+    public GameObject structureObject;
 }
 
 public class Link
