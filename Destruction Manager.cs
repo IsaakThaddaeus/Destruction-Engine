@@ -4,14 +4,14 @@ using UnityEngine;
 
 public class DestructionManager : MonoBehaviour
 {
-    public List<Structure> structures;
+    public List<Structure> structures = new List<Structure>();
     public List<Block> blocks;
-    public List<Link> links;
+    public List<Link> links = new List<Link>();
 
     void Start()
     {
         FindLinks();
-        InitStructures();
+        MaterializeStructures(FindStructures(blocks));
         Debug.Log("Structures: " + structures.Count);
     }
 
@@ -21,7 +21,7 @@ public class DestructionManager : MonoBehaviour
     //------------------------------------------------------------------------------------------------
     void FindLinks()
     {
-        links = new List<Link>();
+
         blocks = FindObjectsByType<Block>(FindObjectsSortMode.None).ToList();
 
         for (int i = 0; i < blocks.Count; i++)
@@ -100,61 +100,25 @@ public class DestructionManager : MonoBehaviour
     //------------------------------------------------------------------------------------------------
     //Update Structures
     //------------------------------------------------------------------------------------------------
-    void InitStructures()
+
+    void UpdateStructure(Block block)
     {
-        structures = new List<Structure>();
+        Structure structure = structures.Find(structure => structure.blocks.Contains(block));
+        structure.blocks.Remove(block);
+        structure.structureObject.transform.DetachChildren();
+        structures.Remove(structure);
+        Destroy(structure.structureObject);
+
+        MaterializeStructures(FindStructures(structure.blocks));
+    }
+    List<List<Block>> FindStructures(List<Block> blocks)
+    {
+        List<List<Block>> newStructures = new List<List<Block>>();
         List<Block> tempBlocks = new List<Block>(blocks);
 
         while (tempBlocks.Count > 0)
         {
-            Structure structure = new Structure();
-            structure.blocks = new List<Block> { tempBlocks[0] };
-            tempBlocks.RemoveAt(0);
-
-            int i = 0;
-            while (i < structure.blocks.Count)
-            {
-                List<Block> connectedBlocks = getAllConnectedBlocks(structure.blocks[i]);
-                tempBlocks = tempBlocks.Except(connectedBlocks).ToList();
-                structure.blocks = structure.blocks.Union(connectedBlocks).ToList();
-                i++;
-            }
-
-            structures.Add(structure);
-        }
-
-
-
-        for (int i = 0; i < structures.Count; i++)
-        {
-            structures[i].structureObject = new GameObject("Structure " + i);
-            structures[i].structureObject.transform.parent = transform;
-            Rigidbody structureRigidBody = structures[i].structureObject.AddComponent<Rigidbody>();
-            structureRigidBody.mass = 100;
-
-            for (int j = 0; j < structures[i].blocks.Count; j++)
-            {
-                structures[i].blocks[j].transform.parent = structures[i].structureObject.transform;
-
-                if (structures[i].blocks[j].grounded)
-                    structureRigidBody.isKinematic = true;
-            }
-        }
-
-    }
-    void UpdateStructure(Block block)
-    {
-       
-        Structure structure = structures.Find(structure => structure.blocks.Contains(block));
-        structure.blocks.Remove(block);
-
-        List<List<Block>> newStructures = new List<List<Block>>();
-        List<Block> tempBlocks = new List<Block>(structure.blocks);
-
-        while (tempBlocks.Count > 0)
-        {
-            List<Block> newStructure = new List<Block>();
-            newStructure = new List<Block> { tempBlocks[0] };
+            List<Block> newStructure = new List<Block> { tempBlocks[0] };
             tempBlocks.RemoveAt(0);
 
             int i = 0;
@@ -169,17 +133,16 @@ public class DestructionManager : MonoBehaviour
             newStructures.Add(newStructure);
         }
 
-
-        structure.structureObject.transform.DetachChildren();
-        structures.Remove(structure);
-        Destroy(structure.structureObject);
-
+        return newStructures;
+    }
+    void MaterializeStructures(List<List<Block>> newStructures)
+    {
         for (int i = 0; i < newStructures.Count; i++)
         {
             Structure newStructure = new Structure();
             newStructure.blocks = new List<Block>(newStructures[i]);
 
-            newStructure.structureObject = new GameObject("Structure " + i);
+            newStructure.structureObject = new GameObject("Structure");
             newStructure.structureObject.transform.parent = transform;
             Rigidbody structureRigidBody = newStructure.structureObject.AddComponent<Rigidbody>();
             structureRigidBody.mass = 100;
@@ -194,9 +157,7 @@ public class DestructionManager : MonoBehaviour
 
             structures.Add(newStructure);
         }
-
     }
-
     List<Block> getAllConnectedBlocks(Block block)
     {
         List<Block> connectedBlocks = new List<Block>();
@@ -212,6 +173,7 @@ public class DestructionManager : MonoBehaviour
 
         return connectedBlocks;
     }
+
     public void destroyBlock(Block block)
     {
         blocks.Remove(block);
