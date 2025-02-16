@@ -27,23 +27,30 @@ public class DestructionManager : MonoBehaviour
         for (int i = 0; i < blocks.Count; i++)
         {
 
-            for (int j = i + 1; j < blocks.Count; j++)
-            {
-                if (CheckOverlapWithTemporaryScale(blocks[i].gameObject, blocks[j].gameObject, 1.01f))
-                {
-                    Debug.Log("Linking " + blocks[i].gameObject.name + " and " + blocks[j].name);
-                    links.Add(new Link(blocks[i], blocks[j]));
-                }
-            }
-
             List<GameObject> nearbyObjects = GetNearbyObjects(blocks[i].gameObject, 1.01f);
 
             for (int j = 0; j < nearbyObjects.Count; j++)
             {
                 if (CheckOverlapWithTemporaryScale(blocks[i].gameObject, nearbyObjects[j], 1.01f))
                 {
-                    Debug.Log("Linking " + blocks[i].gameObject.name + " and " + nearbyObjects[j].name);
-                    blocks[i].grounded = true;
+                    if (nearbyObjects[j].GetComponent<Block>())
+                        links.Add(new Link(blocks[i], nearbyObjects[j].GetComponent<Block>()));
+
+                    else
+                        blocks[i].grounded = true;
+                }
+            }
+        }
+
+        //Remove duplicate links
+        for (int i = 0; i < links.Count; i++)
+        {
+            for (int j = i + 1; j < links.Count; j++)
+            {
+                if ((links[i].blockA == links[j].blockA && links[i].blockB == links[j].blockB) || (links[i].blockA == links[j].blockB && links[i].blockB == links[j].blockA))
+                {
+                    links.RemoveAt(j);
+                    j--;
                 }
             }
         }
@@ -60,10 +67,7 @@ public class DestructionManager : MonoBehaviour
         Collider[] colliders = Physics.OverlapSphere(sphereCenter, sphereRadius);
         foreach (Collider collider in colliders)
         {
-            if (collider.GetComponent<Block>() == null)
-            {
-                nearbyObjects.Add(collider.gameObject);
-            }
+            nearbyObjects.Add(collider.gameObject);
         }
 
         return nearbyObjects;
