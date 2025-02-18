@@ -8,9 +8,13 @@ public class DestructionManager : MonoBehaviour
     public List<Block> blocks;
     public List<Link> links = new List<Link>();
 
+
+    private Dictionary<Block, List<Block>> connectionDictionary = new Dictionary<Block, List<Block>>();
+
     void Start()
     {
         FindLinks();
+        BuildConnectionDictionary();
         MaterializeStructures(FindStructures(blocks));
         Debug.Log("Structures: " + structures.Count);
     }
@@ -104,7 +108,6 @@ public class DestructionManager : MonoBehaviour
     //------------------------------------------------------------------------------------------------
     //Update Structures
     //------------------------------------------------------------------------------------------------
-
     void UpdateStructure(Block block)
     {
         Structure structure = structures.Find(structure => structure.blocks.Contains(block));
@@ -149,11 +152,13 @@ public class DestructionManager : MonoBehaviour
             newStructure.structureObject = new GameObject("Structure");
             newStructure.structureObject.transform.parent = transform;
             Rigidbody structureRigidBody = newStructure.structureObject.AddComponent<Rigidbody>();
-            structureRigidBody.mass = 100;
+
 
             for (int j = 0; j < newStructure.blocks.Count; j++)
             {
                 newStructure.blocks[j].transform.parent = newStructure.structureObject.transform;
+
+                structureRigidBody.mass += 100;
 
                 if (newStructure.blocks[j].grounded)
                     structureRigidBody.isKinematic = true;
@@ -162,29 +167,43 @@ public class DestructionManager : MonoBehaviour
             structures.Add(newStructure);
         }
     }
-    List<Block> getAllConnectedBlocks(Block block)
-    {
-        List<Block> connectedBlocks = new List<Block>();
-
-        for (int i = 0; i < links.Count; i++)
-        {
-            if (links[i].blockA == block)
-                connectedBlocks.Add(links[i].blockB);
-
-            else if (links[i].blockB == block)
-                connectedBlocks.Add(links[i].blockA);
-        }
-
-        return connectedBlocks;
-    }
 
     public void destroyBlock(Block block)
     {
         blocks.Remove(block);
         links.RemoveAll(link => link.blockA == block || link.blockB == block);
+        BuildConnectionDictionary();
         UpdateStructure(block);
 
         Debug.Log("Structures: " + structures.Count);
+    }
+
+    //------------------------------------------------------------------------------------------------
+    //Connection Dictionary
+    //------------------------------------------------------------------------------------------------
+    void BuildConnectionDictionary()
+    {
+        connectionDictionary.Clear();
+        foreach (Link link in links)
+        {
+            if (!connectionDictionary.ContainsKey(link.blockA))
+                connectionDictionary[link.blockA] = new List<Block>();
+            if (!connectionDictionary.ContainsKey(link.blockB))
+                connectionDictionary[link.blockB] = new List<Block>();
+
+            if (!connectionDictionary[link.blockA].Contains(link.blockB))
+                connectionDictionary[link.blockA].Add(link.blockB);
+            if (!connectionDictionary[link.blockB].Contains(link.blockA))
+                connectionDictionary[link.blockB].Add(link.blockA);
+        }
+    }
+    List<Block> getAllConnectedBlocks(Block block)
+    {
+        if (connectionDictionary.TryGetValue(block, out List<Block> connectedBlocks))
+        {
+            return connectedBlocks;
+        }
+        return new List<Block>();
     }
 
 

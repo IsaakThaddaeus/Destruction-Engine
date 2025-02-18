@@ -26,7 +26,7 @@ public class Shooter : MonoBehaviour
                 }
 
                 hitPoint = hit.point;
-                Debug.Log("Hit: " + hit.collider.gameObject.name);
+                //Debug.Log("Hit: " + hit.collider.gameObject.name);
             }
 
             else
