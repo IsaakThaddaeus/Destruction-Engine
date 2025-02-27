@@ -1,9 +1,12 @@
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.VFX;
 
 public class Shooter : MonoBehaviour
 {
     Vector3 hitPoint;
+    public VisualEffect sparks;
+    public VisualEffect dust;
 
     void Start()
     {
@@ -23,9 +26,15 @@ public class Shooter : MonoBehaviour
                 if (hit.collider.gameObject.GetComponent<Block>())
                 {
                     hit.collider.gameObject.GetComponent<Block>().damage(100);
+                    hitPoint = hit.point;
+
+                    sparks.transform.position = hitPoint;
+
+                    sparks.Play();
+  
                 }
 
-                hitPoint = hit.point;
+
                 //Debug.Log("Hit: " + hit.collider.gameObject.name);
             }
 
