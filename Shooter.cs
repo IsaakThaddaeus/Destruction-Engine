@@ -7,10 +7,10 @@ public class Shooter : MonoBehaviour
     Vector3 hitPoint;
     public VisualEffect sparks;
     public VisualEffect dust;
-
-    void Start()
+    DestructionManager destructionManager;
+    void Awake()
     {
-
+        destructionManager = FindFirstObjectByType<DestructionManager>();
     }
 
     void Update()
@@ -25,13 +25,15 @@ public class Shooter : MonoBehaviour
             {
                 if (hit.collider.gameObject.GetComponent<Block>())
                 {
-                    hit.collider.gameObject.GetComponent<Block>().damage(100);
                     hitPoint = hit.point;
-
                     sparks.transform.position = hitPoint;
-
                     sparks.Play();
-  
+
+                    destructionManager.DamageBlock(hit.collider.gameObject.GetComponent<Block>(), 100);
+                    
+
+
+
                 }
 
 

@@ -11,7 +11,7 @@ public class DestructionManager : MonoBehaviour
 
     private Dictionary<Block, List<Block>> connectionDictionary = new Dictionary<Block, List<Block>>();
 
-    void Start()
+    void Awake()
     {
         FindLinks();
         BuildConnectionDictionary();
@@ -112,9 +112,9 @@ public class DestructionManager : MonoBehaviour
     {
         Structure structure = structures.Find(structure => structure.blocks.Contains(block));
         structure.blocks.Remove(block);
-        structure.structureObject.transform.DetachChildren();
+        structure.transform.DetachChildren();
         structures.Remove(structure);
-        Destroy(structure.structureObject);
+        Destroy(structure.gameObject);
 
         MaterializeStructures(FindStructures(structure.blocks));
     }
@@ -146,37 +146,25 @@ public class DestructionManager : MonoBehaviour
     {
         for (int i = 0; i < newStructures.Count; i++)
         {
-            Structure newStructure = new Structure();
+            GameObject newStructureObject = new GameObject("Structure");
+
+            Structure newStructure = newStructureObject.AddComponent<Structure>();
             newStructure.blocks = new List<Block>(newStructures[i]);
-
-            newStructure.structureObject = new GameObject("Structure");
-            newStructure.structureObject.transform.parent = transform;
-            Rigidbody structureRigidBody = newStructure.structureObject.AddComponent<Rigidbody>();
-
+            newStructure.transform.parent = transform;
+            newStructure.rb = newStructure.gameObject.AddComponent<Rigidbody>();
 
             for (int j = 0; j < newStructure.blocks.Count; j++)
             {
-                newStructure.blocks[j].transform.parent = newStructure.structureObject.transform;
-
-                structureRigidBody.mass += 100;
-
+                newStructure.blocks[j].transform.parent = newStructureObject.transform;
+                newStructure.rb.mass += 100;
                 if (newStructure.blocks[j].grounded)
-                    structureRigidBody.isKinematic = true;
+                    newStructure.rb.isKinematic = true;
             }
 
             structures.Add(newStructure);
         }
     }
 
-    public void destroyBlock(Block block)
-    {
-        blocks.Remove(block);
-        links.RemoveAll(link => link.blockA == block || link.blockB == block);
-        BuildConnectionDictionary();
-        UpdateStructure(block);
-
-        Debug.Log("Structures: " + structures.Count);
-    }
 
     //------------------------------------------------------------------------------------------------
     //Connection Dictionary
@@ -208,6 +196,39 @@ public class DestructionManager : MonoBehaviour
 
 
     //------------------------------------------------------------------------------------------------
+    //Damage
+    //------------------------------------------------------------------------------------------------
+    public void DamageBlock(Block block, int damage)
+    {
+        block.health -= damage;
+        if (block.health <= 0)
+            DestroyBlock(block);
+    }
+    void DestroyBlock(Block block)
+    {
+        GameObject fracturedBlock = Instantiate(block.fractureModels[Random.Range(0, block.fractureModels.Count)], block.transform.position, block.transform.rotation);
+
+        foreach (Transform child in fracturedBlock.transform)
+        {
+            int lifeTime = Random.Range(5, 15);
+            child.transform.localScale = 0.95f * block.transform.localScale;
+            child.gameObject.GetComponent<Rigidbody>().AddExplosionForce(250, block.transform.position, 10);
+            Destroy(child.gameObject, lifeTime);
+        }
+
+        Destroy(block.gameObject);
+
+        blocks.Remove(block);
+        links.RemoveAll(link => link.blockA == block || link.blockB == block);
+
+        BuildConnectionDictionary();
+        UpdateStructure(block);
+    }
+
+
+
+
+    //------------------------------------------------------------------------------------------------
     //Draw Debug Lines
     //------------------------------------------------------------------------------------------------
     void OnDrawGizmos()
@@ -225,11 +246,6 @@ public class DestructionManager : MonoBehaviour
 
 }
 
-public class Structure
-{
-    public List<Block> blocks;
-    public GameObject structureObject;
-}
 
 public class Link
 {
