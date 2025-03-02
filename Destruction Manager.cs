@@ -225,6 +225,17 @@ public class DestructionManager : MonoBehaviour
         UpdateStructure(block);
     }
 
+    public void DamagesBlocks(Vector3 position, float radius, int damage)
+    {
+        List<Block> blocksInRange = blocks.FindAll(block => Vector3.Distance(block.transform.position, position) < radius);
+        foreach (Block block in blocksInRange)
+        {
+            DamageBlock(block, damage);
+        }
+    }
+
+
+
 
 
 

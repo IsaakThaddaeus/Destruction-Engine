@@ -29,8 +29,8 @@ public class Shooter : MonoBehaviour
                     sparks.transform.position = hitPoint;
                     sparks.Play();
 
-                    destructionManager.DamageBlock(hit.collider.gameObject.GetComponent<Block>(), 100);
-                    
+                    //destructionManager.DamageBlock(hit.collider.gameObject.GetComponent<Block>(), 100);
+                    destructionManager.DamagesBlocks(hitPoint, 3, 100);
 
 
 

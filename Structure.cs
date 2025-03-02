@@ -16,7 +16,7 @@ public class Structure : MonoBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
- 
+
         
     }
 
