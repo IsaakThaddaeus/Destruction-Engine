@@ -105,19 +105,11 @@ public class DestructionManager : MonoBehaviour
     }
 
 
+
     //------------------------------------------------------------------------------------------------
     //Update Structures
     //------------------------------------------------------------------------------------------------
-    void UpdateStructure(Block block)
-    {
-        Structure structure = structures.Find(structure => structure.blocks.Contains(block));
-        structure.blocks.Remove(block);
-        structure.transform.DetachChildren();
-        structures.Remove(structure);
-        Destroy(structure.gameObject);
 
-        MaterializeStructures(FindStructures(structure.blocks));
-    }
     List<List<Block>> FindStructures(List<Block> blocks)
     {
         List<List<Block>> newStructures = new List<List<Block>>();
@@ -166,6 +158,7 @@ public class DestructionManager : MonoBehaviour
     }
 
 
+
     //------------------------------------------------------------------------------------------------
     //Connection Dictionary
     //------------------------------------------------------------------------------------------------
@@ -195,6 +188,7 @@ public class DestructionManager : MonoBehaviour
     }
 
 
+
     //------------------------------------------------------------------------------------------------
     //Damage
     //------------------------------------------------------------------------------------------------
@@ -205,6 +199,65 @@ public class DestructionManager : MonoBehaviour
             DestroyBlock(block);
     }
     void DestroyBlock(Block block)
+    {
+        SwapBlock(block);
+
+        blocks.Remove(block);
+        links.RemoveAll(link => link.blockA == block || link.blockB == block);
+
+        Structure structure = structures.Find(structure => structure.blocks.Contains(block));
+        structure.blocks.Remove(block);
+        structure.transform.DetachChildren();
+        structures.Remove(structure);
+        Destroy(structure.gameObject);
+
+
+        BuildConnectionDictionary();
+        MaterializeStructures(FindStructures(structure.blocks));
+    }
+
+    public void DamagesBlocks(Vector3 position, float radius, int damage)
+    {
+        List<Block> destroyedBlocks = new List<Block>();
+        List<Block> blocksInRange = blocks.FindAll(block => Vector3.Distance(block.transform.position, position) < radius);
+
+        foreach (Block block in blocksInRange)
+        {
+            block.health -= damage;
+            if (block.health <= 0)
+                destroyedBlocks.Add(block);
+        }
+
+        DestroyBlocks(destroyedBlocks);
+    }
+    void DestroyBlocks(List<Block> destroyedBlocks)
+    {
+        List<Block> remainingBlocks = new List<Block>();
+
+        foreach (Block block in destroyedBlocks)
+        {
+            SwapBlock(block);
+
+            blocks.Remove(block);
+            links.RemoveAll(link => link.blockA == block || link.blockB == block);
+
+            Structure structure = structures.Find(structure => structure.blocks.Contains(block));
+            if (structure != null)
+            {
+                structure.blocks.Remove(block);
+                structure.transform.DetachChildren();
+                structures.Remove(structure);
+                Destroy(structure.gameObject);
+                remainingBlocks.AddRange(structure.blocks);
+            }
+        }
+
+        BuildConnectionDictionary();
+        MaterializeStructures(FindStructures(remainingBlocks));
+
+    }
+
+    void SwapBlock(Block block)
     {
         GameObject fracturedBlock = Instantiate(block.fractureModels[Random.Range(0, block.fractureModels.Count)], block.transform.position, block.transform.rotation);
 
@@ -217,25 +270,7 @@ public class DestructionManager : MonoBehaviour
         }
 
         Destroy(block.gameObject);
-
-        blocks.Remove(block);
-        links.RemoveAll(link => link.blockA == block || link.blockB == block);
-
-        BuildConnectionDictionary();
-        UpdateStructure(block);
     }
-
-    public void DamagesBlocks(Vector3 position, float radius, int damage)
-    {
-        List<Block> blocksInRange = blocks.FindAll(block => Vector3.Distance(block.transform.position, position) < radius);
-        foreach (Block block in blocksInRange)
-        {
-            DamageBlock(block, damage);
-        }
-    }
-
-
-
 
 
 
